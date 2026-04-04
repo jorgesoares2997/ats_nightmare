@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Ghost, Wand2, TerminalSquare, Sparkles, DownloadCloud, PlusCircle, RefreshCw, Crosshair, Globe, Undo2 } from 'lucide-react';
+import { Ghost, Wand2, TerminalSquare, Sparkles, DownloadCloud, PlusCircle, RefreshCw, Crosshair, Globe, UploadCloud, Eye } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { ResumePreview, ResumeData } from '@/components/ResumePreview';
 
@@ -10,11 +10,14 @@ const I18N = {
     subtitle: 'A.I Powered Bypass System • Stealth Resume Generator',
     targetJob: 'TARGET JOB DESCRIPTION',
     placeholderJD: 'Cole a descrição da vaga (Job Description) desejada...',
-    autoExtractDesc: 'O algoritmo irá extrair seu PDF master de "public/curriculo_base.pdf" automaticamente.',
+    autoExtractDesc: 'Extraindo PDF Original:',
+    btnCustomPdf: 'Ou faça upload do seu próprio currículo (PDF)',
+    btnCustomPdfActive: 'Mestre atualizado:',
+    linkGuide: '[ Ver Base Atual ]',
     btnHack: '[ HACKING ATS SYSTEM ]',
     btnBypass: 'BYPASS ATS NOW',
     synthTitle: 'Synthesizing',
-    synthDesc: 'Feeding PDF Master File to Gemini Engine...',
+    synthDesc: 'Feeding Master File to Gemini Engine...',
     successTitle: 'BYPASS SUCCESSFUL',
     successDesc: 'A.I aligned your trajectory com o algoritmo da empresa.',
     btnNew: 'NOVA VAGA',
@@ -29,11 +32,14 @@ const I18N = {
     subtitle: 'A.I Powered Bypass System • Stealth Resume Generator',
     targetJob: 'TARGET JOB DESCRIPTION',
     placeholderJD: 'Paste the target Job Description (JD) here...',
-    autoExtractDesc: 'The algorithm will automatically extract your master PDF from "public/curriculo_base.pdf".',
+    autoExtractDesc: 'Extracting Master PDF:',
+    btnCustomPdf: 'Or upload your own resume base (PDF)',
+    btnCustomPdfActive: 'Master updated:',
+    linkGuide: '[ View Current Base ]',
     btnHack: '[ HACKING ATS SYSTEM ]',
     btnBypass: 'BYPASS ATS NOW',
     synthTitle: 'Synthesizing',
-    synthDesc: 'Feeding PDF Master File to Gemini Engine...',
+    synthDesc: 'Feeding Master File to Gemini Engine...',
     successTitle: 'BYPASS SUCCESSFUL',
     successDesc: 'A.I aligned your trajectory with the company\'s algorithm.',
     btnNew: 'NEW JOB',
@@ -51,12 +57,25 @@ export default function Home() {
   const [language, setLanguage] = useState<'PT' | 'EN'>('PT');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedResume, setGeneratedResume] = useState<ResumeData | null>(null);
+  
+  const [customPdf, setCustomPdf] = useState<{ name: string, data: string } | null>(null);
 
   const printRef = useRef<HTMLDivElement>(null);
   const t = I18N[language];
 
   const toggleLanguage = () => {
     setLanguage(prev => prev === 'PT' ? 'EN' : 'PT');
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64Str = (event.target?.result as string).split(',')[1];
+      setCustomPdf({ name: file.name, data: base64Str });
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleGenerate = async () => {
@@ -68,10 +87,15 @@ export default function Home() {
     setIsGenerating(true);
     setGeneratedResume(null); // Reset
     try {
+      const payload: any = { jobDescription, language };
+      if (customPdf) {
+         payload.customPdfData = customPdf.data;
+      }
+
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobDescription, language }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -91,7 +115,7 @@ export default function Home() {
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: 'Jorge Soares',
+    documentTitle: 'Jorge_Soares_ATS',
   });
 
   return (
@@ -150,8 +174,17 @@ export default function Home() {
                  onChange={e => setJobDescription(e.target.value)}
                  disabled={isGenerating}
                />
-               <p style={{ textAlign: 'center', marginTop: '1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                 {t.autoExtractDesc}
+               <p style={{ textAlign: 'center', marginTop: '1rem', color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+                 <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                   {t.autoExtractDesc} 
+                   <a href="/curriculo_base.pdf" target="_blank" style={{ color: 'var(--secondary-glow)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px', borderBottom: '1px dashed var(--secondary-glow)' }}>
+                     <Eye size={14} /> {t.linkGuide}
+                   </a>
+                 </span>
+                 <label style={{ cursor: 'pointer', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(0,255,204,0.1)', padding: '6px 12px', borderRadius: '50px', transition: 'all 0.3s', border: '1px solid rgba(0,255,204,0.3)' }}>
+                   <input type="file" accept="application/pdf" style={{ display: 'none' }} onChange={handleFileUpload} />
+                   <UploadCloud size={16} /> {customPdf ? `${t.btnCustomPdfActive} ${customPdf.name}` : t.btnCustomPdf}
+                 </label>
                </p>
             </div>
 

@@ -4,6 +4,11 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'ATS Nightmare',
   description: 'AI-Powered Resume Optimizer for ATS Bypass',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' }
+    ]
+  }
 };
 
 export default function RootLayout({

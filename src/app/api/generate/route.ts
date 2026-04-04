@@ -6,7 +6,7 @@ import * as path from 'path';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { jobDescription, language } = body;
+    const { jobDescription, language, customPdfData } = body;
 
     const apiKey = process.env.GEMINI_API_KEY;
 
@@ -18,15 +18,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Job Description é obrigatório.' }, { status: 400 });
     }
 
-    // Tenta ler o currículo base do PDF local
-    const pdfPath = path.join(process.cwd(), 'public', 'curriculo_base.pdf');
+    // Tenta ler o currículo base do PDF local ou usa o providenciado pelo usuario
     let pdfData: string;
-    try {
-      pdfData = fs.readFileSync(pdfPath).toString("base64");
-    } catch (err) {
-      return NextResponse.json({ 
-        error: 'Arquivo curriculo_base.pdf não encontrado na pasta public. Certifique-se de adicioná-lo.' 
-      }, { status: 404 });
+    if (customPdfData) {
+      pdfData = customPdfData;
+    } else {
+      const pdfPath = path.join(process.cwd(), 'public', 'curriculo_base.pdf');
+      try {
+        pdfData = fs.readFileSync(pdfPath).toString("base64");
+      } catch (err) {
+        return NextResponse.json({ 
+          error: 'Arquivo curriculo_base.pdf não encontrado na pasta public. Certifique-se de adicioná-lo.' 
+        }, { status: 404 });
+      }
     }
 
     const pdfPart = {
