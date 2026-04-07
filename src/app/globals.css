@@ -234,6 +234,14 @@ body {
   transition: all 0.2s;
 }
 
+.icon-action-btn {
+  min-width: 46px;
+  min-height: 46px;
+  justify-content: center;
+  padding: 0.72rem;
+  gap: 0;
+}
+
 .action-btn:hover {
   background: rgba(255, 255, 255, 0.1);
   border-color: var(--primary-glow);
@@ -254,6 +262,30 @@ body {
   box-shadow: 0 0 20px rgba(0, 255, 204, 0.4);
 }
 
+.cover-letter-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.cover-letter-btn.generating {
+  border-color: transparent;
+}
+
+.cover-letter-btn.generating::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50px;
+  padding: 1px;
+  background: linear-gradient(120deg, #7000ff, #00ffcc, #7000ff);
+  background-size: 220% 220%;
+  animation: borderPulse 1.3s linear infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
 /* Animations */
 @keyframes spin {
   from { transform: rotate(0deg); }
@@ -268,9 +300,54 @@ body {
   animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+.prompt-toggle-btn {
+  width: 100%;
+}
+
+.chevron {
+  transition: transform 0.25s ease;
+}
+
+.chevron.open {
+  transform: rotate(180deg);
+}
+
+.prompt-accordion {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.28s ease, opacity 0.22s ease;
+}
+
+.prompt-accordion.open {
+  max-height: 280px;
+  opacity: 1;
+}
+
+.tippy-box[data-theme~='gradient'] {
+  color: #fff;
+  background: linear-gradient(120deg, #ffffff 0%, #c8fff4 35%, #00ffcc 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.4px;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.tippy-box[data-theme~='gradient'] > .tippy-arrow::before {
+  color: #7ceedd;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes borderPulse {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
 }
 
 /* Print */

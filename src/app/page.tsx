@@ -1,8 +1,12 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Ghost, Wand2, TerminalSquare, Sparkles, DownloadCloud, PlusCircle, RefreshCw, Crosshair, Globe, UploadCloud, Eye } from 'lucide-react';
+import { Ghost, Wand2, TerminalSquare, Sparkles, DownloadCloud, PlusCircle, RefreshCw, Crosshair, Globe, UploadCloud, Eye, ChevronDown, RotateCcw, FileText, Copy, Check } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
+import Tippy from '@tippyjs/react';
+import 'tippy.js/dist/tippy.css';
+import 'tippy.js/themes/material.css';
+import 'tippy.js/animations/scale-extreme.css';
 import { ResumePreview, ResumeData } from '@/components/ResumePreview';
 
 const I18N = {
@@ -14,17 +18,32 @@ const I18N = {
     btnCustomPdf: 'Ou faça upload do seu próprio currículo (PDF)',
     btnCustomPdfActive: 'Mestre atualizado:',
     linkGuide: '[ Ver Base Atual ]',
-    btnHack: '[ HACKING ATS SYSTEM ]',
-    btnBypass: 'BYPASS ATS NOW',
-    synthTitle: 'Synthesizing',
-    synthDesc: 'Feeding Master File to Gemini Engine...',
-    successTitle: 'BYPASS SUCCESSFUL',
-    successDesc: 'A.I aligned your trajectory com o algoritmo da empresa.',
+    btnHack: '[ INVADINDO ATS ]',
+    btnBypass: 'OTIMIZAR ATS AGORA',
+    btnPromptToggle: 'Adicionar ajuste no prompt da vaga',
+    promptLabel: 'Ajuste Especifico da Vaga',
+    promptPlaceholder: 'Ex: Priorize Java/Spring, resultados quantificaveis, foco em microsservicos e cloud...',
+    coverLetterAction: 'Gerar carta de apresentacao baseada na vaga',
+    coverLetterTitle: 'Carta de Apresentacao',
+    coverLetterLoading: 'Gerando carta personalizada...',
+    copyCoverLetter: 'Copiar carta',
+    copied: 'Copiado',
+    synthTitle: 'Sintetizando',
+    synthDesc: 'Enviando PDF mestre para o motor Gemini...',
+    successTitle: 'BYPASS CONCLUIDO',
+    successDesc: 'A.I alinhou sua trajetoria com o algoritmo da empresa.',
     btnNew: 'NOVA VAGA',
     btnRecompile: 'REFAZER',
-    btnDownload: 'GENERATE PDF',
+    btnRecompilePrompt: 'REFAZER COM AJUSTE',
+    btnDownload: 'GERAR PDF',
+    hintNew: 'Novo (N)',
+    hintRecompile: 'Refazer (R)',
+    hintRecompilePrompt: 'Refazer com ajuste (RP)',
+    hintDownload: 'Baixar PDF (PDF)',
+    hintCoverLetter: 'Gerar carta de apresentacao',
     alertJD: '⚠️ Cole a Descrição da Vaga (JD) para continuar.',
     alertError: 'Erro na requisição: ',
+    footerPortfolio: 'Portfolio',
     footerBy: 'Por',
     langToggle: 'PT-BR'
   },
@@ -38,15 +57,30 @@ const I18N = {
     linkGuide: '[ View Current Base ]',
     btnHack: '[ HACKING ATS SYSTEM ]',
     btnBypass: 'BYPASS ATS NOW',
+    btnPromptToggle: 'Add role-specific prompt tweak',
+    promptLabel: 'Role-Specific Prompt Tweak',
+    promptPlaceholder: 'Ex: Prioritize Java/Spring, quantified outcomes, microservices and cloud...',
+    coverLetterAction: 'Generate cover letter based on job description',
+    coverLetterTitle: 'Cover Letter',
+    coverLetterLoading: 'Generating tailored cover letter...',
+    copyCoverLetter: 'Copy letter',
+    copied: 'Copied',
     synthTitle: 'Synthesizing',
     synthDesc: 'Feeding Master File to Gemini Engine...',
     successTitle: 'BYPASS SUCCESSFUL',
     successDesc: 'A.I aligned your trajectory with the company\'s algorithm.',
     btnNew: 'NEW JOB',
-    btnRecompile: 'REMAKE',
+    btnRecompile: 'RETRY',
+    btnRecompilePrompt: 'RETRY WITH TWEAK',
     btnDownload: 'GENERATE PDF',
+    hintNew: 'New (N)',
+    hintRecompile: 'Retry (R)',
+    hintRecompilePrompt: 'Retry with tweak (RT)',
+    hintDownload: 'Download PDF (PDF)',
+    hintCoverLetter: 'Generate cover letter',
     alertJD: '⚠️ Paste the Job Description (JD) to continue.',
     alertError: 'Request error: ',
+    footerPortfolio: 'Portfolio',
     footerBy: 'By',
     langToggle: 'EN-US'
   }
@@ -59,12 +93,24 @@ export default function Home() {
   const [generatedResume, setGeneratedResume] = useState<ResumeData | null>(null);
   
   const [customPdf, setCustomPdf] = useState<{ name: string, data: string } | null>(null);
+  const [customPrompt, setCustomPrompt] = useState('');
+  const [showPromptInput, setShowPromptInput] = useState(false);
+  const [coverLetter, setCoverLetter] = useState('');
+  const [isGeneratingCoverLetter, setIsGeneratingCoverLetter] = useState(false);
+  const [copiedCoverLetter, setCopiedCoverLetter] = useState(false);
 
   const printRef = useRef<HTMLDivElement>(null);
   const t = I18N[language];
 
   const toggleLanguage = () => {
     setLanguage(prev => prev === 'PT' ? 'EN' : 'PT');
+  };
+
+  const getErrorMessage = (error: unknown) => {
+    if (error instanceof Error) {
+      return error.message;
+    }
+    return 'Unknown Error';
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,11 +131,21 @@ export default function Home() {
     }
 
     setIsGenerating(true);
+    setShowPromptInput(false);
     setGeneratedResume(null); // Reset
+    setCoverLetter('');
     try {
-      const payload: any = { jobDescription, language };
+      const payload: {
+        jobDescription: string;
+        language: 'PT' | 'EN';
+        customPdfData?: string;
+        customPrompt?: string;
+      } = { jobDescription, language };
       if (customPdf) {
          payload.customPdfData = customPdf.data;
+      }
+      if (customPrompt.trim()) {
+        payload.customPrompt = customPrompt.trim();
       }
 
       const response = await fetch('/api/generate', {
@@ -105,11 +161,65 @@ export default function Home() {
 
       const data = await response.json();
       setGeneratedResume(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      alert(t.alertError + error.message);
+      alert(t.alertError + getErrorMessage(error));
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleGenerateCoverLetter = async () => {
+    if (!jobDescription || isGeneratingCoverLetter) {
+      return;
+    }
+
+    setIsGeneratingCoverLetter(true);
+    try {
+      const payload: {
+        jobDescription: string;
+        language: 'PT' | 'EN';
+        customPdfData?: string;
+        customPrompt?: string;
+      } = { jobDescription, language };
+
+      if (customPdf) {
+        payload.customPdfData = customPdf.data;
+      }
+      if (customPrompt.trim()) {
+        payload.customPrompt = customPrompt.trim();
+      }
+
+      const response = await fetch('/api/cover-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Unknown Error');
+      }
+
+      const data = await response.json();
+      setCoverLetter(data.coverLetter || '');
+    } catch (error: unknown) {
+      console.error(error);
+      alert(t.alertError + getErrorMessage(error));
+    } finally {
+      setIsGeneratingCoverLetter(false);
+    }
+  };
+
+  const handleCopyCoverLetter = async () => {
+    if (!coverLetter.trim()) return;
+    try {
+      await navigator.clipboard.writeText(coverLetter);
+      setCopiedCoverLetter(true);
+      setTimeout(() => setCopiedCoverLetter(false), 1600);
+    } catch (error) {
+      console.error(error);
+      alert(t.alertError + getErrorMessage(error));
     }
   };
 
@@ -205,6 +315,31 @@ export default function Home() {
                 </>
               )}
             </button>
+            <button
+              className="action-btn prompt-toggle-btn"
+              style={{ width: '100%', justifyContent: 'space-between', marginTop: '0.8rem' }}
+              onClick={() => setShowPromptInput(prev => !prev)}
+              disabled={isGenerating}
+              aria-expanded={showPromptInput}
+            >
+              <span>{t.btnPromptToggle}</span>
+              <ChevronDown size={16} className={`chevron ${showPromptInput ? 'open' : ''}`} />
+            </button>
+            <div className={`prompt-accordion ${showPromptInput ? 'open' : ''}`}>
+              <div style={{ marginTop: '0.9rem' }}>
+                <label className="input-label" style={{ marginBottom: '0.6rem' }}>
+                  <Wand2 size={16} /> {t.promptLabel}
+                </label>
+                <textarea
+                  className="input-element"
+                  style={{ minHeight: '120px' }}
+                  placeholder={t.promptPlaceholder}
+                  value={customPrompt}
+                  onChange={e => setCustomPrompt(e.target.value)}
+                  disabled={isGenerating}
+                />
+              </div>
+            </div>
           </section>
 
           {/* GENERATING OVERLAY */}
@@ -230,17 +365,97 @@ export default function Home() {
                      <p style={{ color: '#aaa', margin: '5px 0 0', fontSize: '0.9rem' }}>{t.successDesc}</p>
                    </div>
                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                      <button className="action-btn" onClick={() => { setGeneratedResume(null); setJobDescription(''); }}>
-                        <PlusCircle size={16} /> {t.btnNew}
-                      </button>
-                      <button className="action-btn" onClick={handleGenerate}>
-                        <RefreshCw size={16} /> {t.btnRecompile}
-                      </button>
-                      <button className="action-btn download-btn" onClick={handlePrint} style={{ padding: '0.8rem 2rem' }}>
-                        <DownloadCloud size={18} /> {t.btnDownload}
-                      </button>
+                      <Tippy content={t.hintNew} theme="material" animation="scale-extreme">
+                        <button className="action-btn icon-action-btn" onClick={() => { setGeneratedResume(null); setJobDescription(''); setShowPromptInput(false); }} aria-label={t.hintNew}>
+                          <PlusCircle size={17} />
+                        </button>
+                      </Tippy>
+                      <Tippy content={t.hintRecompile} theme="material" animation="scale-extreme">
+                        <button className="action-btn icon-action-btn" onClick={handleGenerate} aria-label={t.hintRecompile}>
+                          <RefreshCw size={17} />
+                        </button>
+                      </Tippy>
+                      <Tippy content={t.hintRecompilePrompt} theme="material" animation="scale-extreme">
+                        <button className="action-btn icon-action-btn" onClick={handleGenerate} aria-label={t.hintRecompilePrompt}>
+                          <RotateCcw size={17} />
+                        </button>
+                      </Tippy>
+                      <Tippy content={t.hintDownload} theme="material" animation="scale-extreme">
+                        <button className="action-btn download-btn icon-action-btn" onClick={handlePrint} aria-label={t.hintDownload}>
+                          <DownloadCloud size={17} />
+                        </button>
+                      </Tippy>
+                      <Tippy content={t.hintCoverLetter} theme="material" animation="scale-extreme">
+                        <button
+                          className="action-btn icon-action-btn"
+                          onClick={handleGenerateCoverLetter}
+                          aria-label={t.hintCoverLetter}
+                          disabled={isGeneratingCoverLetter}
+                        >
+                          <FileText size={17} className={isGeneratingCoverLetter ? 'spin' : ''} />
+                        </button>
+                      </Tippy>
                    </div>
                 </div>
+                <button
+                  className={`action-btn no-print cover-letter-btn ${isGeneratingCoverLetter ? 'generating' : ''}`}
+                  onClick={handleGenerateCoverLetter}
+                  disabled={isGeneratingCoverLetter}
+                  style={{ marginBottom: '1.2rem', width: '100%', justifyContent: 'center' }}
+                >
+                  <FileText size={16} className={isGeneratingCoverLetter ? 'spin' : ''} /> {t.coverLetterAction}
+                </button>
+                <div className={`cyber-card no-print prompt-card ${showPromptInput ? 'open' : ''}`} style={{ marginBottom: '1.2rem' }}>
+                  <button
+                    className="action-btn prompt-toggle-btn"
+                    style={{ width: '100%', justifyContent: 'space-between' }}
+                    onClick={() => setShowPromptInput(prev => !prev)}
+                    disabled={isGenerating}
+                    aria-expanded={showPromptInput}
+                  >
+                    <span>{t.btnPromptToggle}</span>
+                    <ChevronDown size={16} className={`chevron ${showPromptInput ? 'open' : ''}`} />
+                  </button>
+                  <div className={`prompt-accordion ${showPromptInput ? 'open' : ''}`}>
+                    <div style={{ marginTop: '0.9rem' }}>
+                      <label className="input-label" style={{ marginBottom: '0.6rem' }}>
+                        <Wand2 size={16} /> {t.promptLabel}
+                      </label>
+                      <textarea
+                        className="input-element"
+                        style={{ minHeight: '120px' }}
+                        placeholder={t.promptPlaceholder}
+                        value={customPrompt}
+                        onChange={e => setCustomPrompt(e.target.value)}
+                        disabled={isGenerating}
+                      />
+                    </div>
+                  </div>
+                </div>
+                {coverLetter && (
+                  <div className="cyber-card no-print" style={{ marginBottom: '1.2rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                      <label className="input-label" style={{ marginBottom: 0 }}>
+                        <FileText size={16} /> {t.coverLetterTitle}
+                      </label>
+                      <button
+                        className="action-btn"
+                        onClick={handleCopyCoverLetter}
+                        style={{ padding: '0.45rem 0.8rem', fontSize: '0.85rem' }}
+                        aria-label={t.copyCoverLetter}
+                      >
+                        {copiedCoverLetter ? <Check size={14} /> : <Copy size={14} />}
+                        {copiedCoverLetter ? t.copied : t.copyCoverLetter}
+                      </button>
+                    </div>
+                    <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7, color: 'var(--text-main)' }}>{coverLetter}</p>
+                  </div>
+                )}
+                {isGeneratingCoverLetter && (
+                  <div className="cyber-card no-print" style={{ marginBottom: '1.2rem' }}>
+                    <p style={{ color: 'var(--text-muted)' }}>{t.coverLetterLoading}</p>
+                  </div>
+                )}
 
                 <div className="no-print" style={{ 
                   background: '#1a1b26', 
@@ -257,7 +472,7 @@ export default function Home() {
                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
                    }}>
                       <div ref={printRef}>
-                        <ResumePreview data={generatedResume} />
+                        <ResumePreview data={generatedResume} language={language} />
                       </div>
                    </div>
                 </div>
@@ -270,7 +485,7 @@ export default function Home() {
           {t.footerBy} Jorge Soares © {new Date().getFullYear()} — ATS Nightmare. <br />
           <div style={{ marginTop: '0.8rem', display: 'flex', gap: '1.5rem', justifyContent: 'center' }}>
             <a href="https://www.linkedin.com/in/jorgesoar/" target="_blank" style={{ color: 'var(--primary-glow)', textDecoration: 'none' }}>LinkedIn</a>
-            <a href="https://portfolio-jorge-soares.vercel.app" target="_blank" style={{ color: 'var(--primary-glow)', textDecoration: 'none' }}>Portfólio</a>
+            <a href="https://portfolio-jorge-soares.vercel.app" target="_blank" style={{ color: 'var(--primary-glow)', textDecoration: 'none' }}>{t.footerPortfolio}</a>
           </div>
         </footer>
       </div>

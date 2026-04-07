@@ -25,10 +25,29 @@ export interface ResumeData {
 
 interface ResumePreviewProps {
   data: ResumeData;
+  language: 'PT' | 'EN';
 }
 
 export const ResumePreview = React.forwardRef<HTMLDivElement, ResumePreviewProps>(
-  ({ data }, ref) => {
+  ({ data, language }, ref) => {
+    const labels = language === 'EN'
+      ? {
+          linkedin: 'LinkedIn',
+          github: 'GitHub',
+          summary: 'Professional Summary',
+          skills: 'Skills',
+          experience: 'Professional Experience',
+          education: 'Education',
+        }
+      : {
+          linkedin: 'LinkedIn',
+          github: 'GitHub',
+          summary: 'Resumo Profissional',
+          skills: 'Habilidades',
+          experience: 'Experiencia Profissional',
+          education: 'Formacao Academica',
+        };
+
     return (
       <div 
         ref={ref} 
@@ -52,26 +71,30 @@ export const ResumePreview = React.forwardRef<HTMLDivElement, ResumePreviewProps
             {data.personalInfo.title}
           </h2>
           <div style={{ fontSize: '12px', color: '#555', display: 'flex', gap: '15px' }}>
-            <span>jorgesoares2997@gmail.com | (81) 98759-4291</span>
+            <span>{data.personalInfo.contact}</span>
             {data.personalInfo.linkedin && (
-              <a href={data.personalInfo.linkedin} style={{ color: '#0066cc', textDecoration: 'none' }} target="_blank">LinkedIn</a>
+              <a href={data.personalInfo.linkedin} style={{ color: '#0066cc', textDecoration: 'none' }} target="_blank" rel="noreferrer">
+                {labels.linkedin}
+              </a>
             )}
             {data.personalInfo.github && (
-              <a href={data.personalInfo.github} style={{ color: '#0066cc', textDecoration: 'none' }} target="_blank">GitHub</a>
+              <a href={data.personalInfo.github} style={{ color: '#0066cc', textDecoration: 'none' }} target="_blank" rel="noreferrer">
+                {labels.github}
+              </a>
             )}
           </div>
         </header>
 
         <section style={{ marginBottom: '20px' }}>
           <h3 style={{ fontSize: '14px', textTransform: 'uppercase', borderBottom: '1px solid #ccc', paddingBottom: '3px', marginBottom: '10px', color: '#222' }}>
-            Resumo Profissional
+            {labels.summary}
           </h3>
           <p style={{ fontSize: '12px', color: '#333' }} dangerouslySetInnerHTML={{ __html: data.summary }} />
         </section>
 
         <section style={{ marginBottom: '20px' }}>
           <h3 style={{ fontSize: '14px', textTransform: 'uppercase', borderBottom: '1px solid #ccc', paddingBottom: '3px', marginBottom: '10px', color: '#222' }}>
-            Habilidades
+            {labels.skills}
           </h3>
           <ul style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: 0, margin: 0, listStyle: 'none' }}>
             {data.skills.map((skill, i) => (
@@ -82,7 +105,7 @@ export const ResumePreview = React.forwardRef<HTMLDivElement, ResumePreviewProps
 
         <section style={{ marginBottom: '20px' }}>
           <h3 style={{ fontSize: '14px', textTransform: 'uppercase', borderBottom: '1px solid #ccc', paddingBottom: '3px', marginBottom: '10px', color: '#222' }}>
-            Experiência Profissional
+            {labels.experience}
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
             {data.experience.map((exp, i) => (
@@ -103,7 +126,7 @@ export const ResumePreview = React.forwardRef<HTMLDivElement, ResumePreviewProps
 
         <section>
           <h3 style={{ fontSize: '14px', textTransform: 'uppercase', borderBottom: '1px solid #ccc', paddingBottom: '3px', marginBottom: '10px', color: '#222' }}>
-            Formação Acadêmica
+            {labels.education}
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {data.education.map((edu, i) => (

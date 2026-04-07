@@ -3,10 +3,58 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as fs from 'fs';
 import * as path from 'path';
 
+const FALLBACK_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-1.5-flash',
+];
+
+function isRetryableGeminiError(error: unknown) {
+  const maybeError = error as { status?: number; message?: string };
+  const status = maybeError?.status;
+  const message = String(maybeError?.message ?? '');
+
+  if (status === 429 || status === 500 || status === 503) {
+    return true;
+  }
+
+  return /\b(429|500|503)\b|Service Unavailable|high demand|temporarily unavailable/i.test(message);
+}
+
+async function generateWithFallbackModels(
+  genAI: GoogleGenerativeAI,
+  pdfPart: { inlineData: { data: string; mimeType: string } },
+  promptText: string
+) {
+  let lastError: unknown = null;
+
+  for (const modelName of FALLBACK_MODELS) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent([pdfPart, promptText]);
+      return { responseText: result.response.text(), modelName };
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableGeminiError(error)) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'Unknown error';
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { jobDescription, language, customPdfData } = body;
+    const { jobDescription, language, customPdfData, customPrompt } = body;
 
     const apiKey = process.env.GEMINI_API_KEY;
 
@@ -26,7 +74,7 @@ export async function POST(req: Request) {
       const pdfPath = path.join(process.cwd(), 'public', 'curriculo_base.pdf');
       try {
         pdfData = fs.readFileSync(pdfPath).toString("base64");
-      } catch (err) {
+      } catch {
         return NextResponse.json({ 
           error: 'Arquivo curriculo_base.pdf não encontrado na pasta public. Certifique-se de adicioná-lo.' 
         }, { status: 404 });
@@ -39,9 +87,6 @@ export async function POST(req: Request) {
         mimeType: "application/pdf"
       }
     };
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const promptText = `
 Você é um especialista em ATS (Applicant Tracking System) nível expert e um recrutador sênior de tecnologia.
@@ -93,11 +138,12 @@ Leia profundamente as informações do arquivo PDF anexo, perceba perfeitamente 
 
 # DESCRIÇÃO DA VAGA (JD):
 ${jobDescription}
+
+${customPrompt ? `# AJUSTES ESPECÍFICOS DO USUÁRIO:\n${customPrompt}` : ''}
 `;
 
-    // Chamamos a model com 2 parts: documento PDF e o texto do Prompt
-    const result = await model.generateContent([pdfPart, promptText]);
-    const responseText = result.response.text();
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const { responseText, modelName } = await generateWithFallbackModels(genAI, pdfPart, promptText);
     
     let cleanJsonStr = responseText.trim();
     if (cleanJsonStr.startsWith('\`\`\`json')) {
@@ -109,13 +155,17 @@ ${jobDescription}
     }
 
     const data = JSON.parse(cleanJsonStr.trim());
+    return NextResponse.json({
+      ...data,
+      _meta: {
+        generatedWithModel: modelName,
+      },
+    });
 
-    return NextResponse.json(data);
-
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro na geração:', error);
     return NextResponse.json(
-      { error: 'Falha ao processar com a IA. Verifique as credenciais ou texto enviado.', details: error.message },
+      { error: 'Falha ao processar com a IA. Verifique as credenciais ou texto enviado.', details: getErrorMessage(error) },
       { status: 500 }
     );
   }
