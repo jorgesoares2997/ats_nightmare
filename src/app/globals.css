@@ -121,6 +121,20 @@ body {
   }
 }
 
+/* Job context panel + PDF preview: stack on small screens, sidebar + fluid preview on wide */
+.result-context-grid {
+  display: grid;
+  gap: 1.5rem;
+  align-items: start;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 960px) {
+  .result-context-grid {
+    grid-template-columns: minmax(280px, min(38vw, 400px)) minmax(0, 1fr);
+  }
+}
+
 .input-element {
   width: 100%;
   background: rgba(0,0,0, 0.4);

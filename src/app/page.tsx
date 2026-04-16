@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Ghost, Wand2, TerminalSquare, Sparkles, DownloadCloud, PlusCircle, RefreshCw, Crosshair, Globe, UploadCloud, Eye, ChevronDown, RotateCcw, FileText, Copy, Check } from 'lucide-react';
+import { Ghost, Wand2, TerminalSquare, Sparkles, DownloadCloud, PlusCircle, RefreshCw, Crosshair, Globe, UploadCloud, Eye, ChevronDown, RotateCcw, FileText, Copy, Check, Mail } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
@@ -45,7 +45,10 @@ const I18N = {
     alertError: 'Erro na requisição: ',
     footerPortfolio: 'Portfolio',
     footerBy: 'Por',
-    langToggle: 'PT-BR'
+    langToggle: 'PT-BR',
+    gmailCompose: 'Abrir Gmail — escrever e-mail',
+    contextForRun: 'Contexto desta geração',
+    readOnlyHint: 'Somente leitura — copie se precisar'
   },
   EN: {
     subtitle: 'A.I Powered Bypass System • Stealth Resume Generator',
@@ -82,9 +85,14 @@ const I18N = {
     alertError: 'Request error: ',
     footerPortfolio: 'Portfolio',
     footerBy: 'By',
-    langToggle: 'EN-US'
+    langToggle: 'EN-US',
+    gmailCompose: 'Open Gmail — compose',
+    contextForRun: 'Context for this run',
+    readOnlyHint: 'Read-only — copy if needed'
   }
 };
+
+const GMAIL_COMPOSE_URL = 'https://mail.google.com/mail/u/0/#inbox?compose=new';
 
 export default function Home() {
   const [jobDescription, setJobDescription] = useState('');
@@ -232,34 +240,69 @@ export default function Home() {
     <>
       <div className="mesh-bg no-print" />
 
-      {/* Floating Language Translator Toggle */}
-      <button 
+      {/* Gmail compose + language toggle */}
+      <div
         className="no-print"
-        onClick={toggleLanguage}
         style={{
           position: 'fixed',
           top: '30px',
           right: '30px',
           zIndex: 9999,
-          background: 'rgba(26, 27, 38, 0.7)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid var(--border-color)',
-          color: 'var(--text-main)',
-          padding: '10px 20px',
-          borderRadius: '50px',
-          cursor: 'pointer',
-          fontWeight: 'bold',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          transition: 'all 0.3s ease',
-          boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3)'
+          gap: '12px'
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary-glow)' }}
-        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)' }}
       >
-        <Globe size={18} color="var(--primary-glow)" /> {t.langToggle}
-      </button>
+        <Tippy content={t.gmailCompose} theme="material" animation="scale-extreme">
+          <a
+            href={GMAIL_COMPOSE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={t.gmailCompose}
+            style={{
+              background: 'rgba(26, 27, 38, 0.7)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-main)',
+              padding: '10px 14px',
+              borderRadius: '50px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3)',
+              textDecoration: 'none'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary-glow)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)' }}
+          >
+            <Mail size={20} color="var(--primary-glow)" />
+          </a>
+        </Tippy>
+        <button
+          onClick={toggleLanguage}
+          style={{
+            background: 'rgba(26, 27, 38, 0.7)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid var(--border-color)',
+            color: 'var(--text-main)',
+            padding: '10px 20px',
+            borderRadius: '50px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.3s ease',
+            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3)'
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary-glow)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)' }}
+        >
+          <Globe size={18} color="var(--primary-glow)" /> {t.langToggle}
+        </button>
+      </div>
       
       <div className="cy-container fade-in">
         <header className="cy-header no-print">
@@ -273,18 +316,18 @@ export default function Home() {
           {/* INPUT PANEL */}
           <section className="cyber-card no-print" style={{ display: generatedResume ? 'none' : 'block' }}>
             <div className="input-group">
-               <label className="input-label" style={{ justifyContent: 'center' }}>
+               <label className="input-label" style={{ justifyContent: 'flex-start' }}>
                  <Crosshair size={18} /> {t.targetJob}
                </label>
                <textarea 
                  className="input-element" 
-                 style={{ minHeight: '280px', fontSize: '1.05rem', textAlign: 'center' }}
+                 style={{ minHeight: '280px', fontSize: '1.05rem', textAlign: 'start' }}
                  placeholder={t.placeholderJD}
                  value={jobDescription}
                  onChange={e => setJobDescription(e.target.value)}
                  disabled={isGenerating}
                />
-               <p style={{ textAlign: 'center', marginTop: '1rem', color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+               <p style={{ textAlign: 'start', marginTop: '1rem', color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' }}>
                  <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                    {t.autoExtractDesc} 
                    <a href="/curriculo_base.pdf" target="_blank" style={{ color: 'var(--secondary-glow)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px', borderBottom: '1px dashed var(--secondary-glow)' }}>
@@ -332,7 +375,7 @@ export default function Home() {
                 </label>
                 <textarea
                   className="input-element"
-                  style={{ minHeight: '120px' }}
+                  style={{ minHeight: '120px', textAlign: 'start' }}
                   placeholder={t.promptPlaceholder}
                   value={customPrompt}
                   onChange={e => setCustomPrompt(e.target.value)}
@@ -423,7 +466,7 @@ export default function Home() {
                       </label>
                       <textarea
                         className="input-element"
-                        style={{ minHeight: '120px' }}
+                        style={{ minHeight: '120px', textAlign: 'start' }}
                         placeholder={t.promptPlaceholder}
                         value={customPrompt}
                         onChange={e => setCustomPrompt(e.target.value)}
@@ -457,24 +500,88 @@ export default function Home() {
                   </div>
                 )}
 
-                <div className="no-print" style={{ 
-                  background: '#1a1b26', 
-                  padding: '3rem', 
-                  borderRadius: '24px', 
-                  overflowX: 'auto',
-                  border: '1px solid var(--border-color)',
-                  display: 'flex',
-                  justifyContent: 'center'
-                }}>
-                   <div style={{ 
-                       transform: 'scale(1)', 
-                       transformOrigin: 'top center',
-                       boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
-                   }}>
+                <div className="no-print result-context-grid">
+                  <section className="cyber-card" style={{ position: 'sticky', top: '1rem' }}>
+                    <h3
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        color: 'var(--primary-glow)',
+                        fontSize: '0.85rem',
+                        letterSpacing: '2px',
+                        textTransform: 'uppercase',
+                        margin: '0 0 1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <Crosshair size={16} /> {t.contextForRun}
+                    </h3>
+                    <p style={{ margin: '0 0 0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t.readOnlyHint}</p>
+                    <label className="input-label" style={{ marginBottom: '0.5rem', justifyContent: 'flex-start' }}>
+                      <Crosshair size={14} /> {t.targetJob}
+                    </label>
+                    <textarea
+                      readOnly
+                      className="input-element"
+                      value={jobDescription}
+                      aria-label={t.targetJob}
+                      style={{
+                        minHeight: '160px',
+                        maxHeight: '42vh',
+                        overflowY: 'auto',
+                        textAlign: 'start',
+                        resize: 'vertical',
+                        cursor: 'text'
+                      }}
+                    />
+                    {customPrompt.trim() ? (
+                      <div style={{ marginTop: '1.25rem' }}>
+                        <label className="input-label" style={{ marginBottom: '0.5rem', justifyContent: 'flex-start' }}>
+                          <Wand2 size={14} /> {t.promptLabel}
+                        </label>
+                        <textarea
+                          readOnly
+                          className="input-element"
+                          value={customPrompt}
+                          aria-label={t.promptLabel}
+                          style={{
+                            minHeight: '100px',
+                            maxHeight: '28vh',
+                            overflowY: 'auto',
+                            textAlign: 'start',
+                            resize: 'vertical',
+                            cursor: 'text'
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                  </section>
+
+                  <div
+                    style={{
+                      background: '#1a1b26',
+                      padding: 'clamp(1rem, 3vw, 3rem)',
+                      borderRadius: '24px',
+                      overflowX: 'auto',
+                      border: '1px solid var(--border-color)',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      minWidth: 0
+                    }}
+                  >
+                    <div
+                      style={{
+                        transform: 'scale(1)',
+                        transformOrigin: 'top center',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                      }}
+                    >
                       <div ref={printRef}>
                         <ResumePreview data={generatedResume} language={language} />
                       </div>
-                   </div>
+                    </div>
+                  </div>
                 </div>
              </div>
           )}
