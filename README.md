@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/favicon.ico" alt="ATS Nightmare Logo" width="120" />
+  <img src="public/favicon.svg" alt="ATS Nightmare Logo" width="120" />
 </div>
 
 <h1 align="center">ATS Nightmare 👻</h1>
