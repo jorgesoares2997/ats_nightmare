@@ -101,6 +101,7 @@ Regras:
 7. Não inventar experiência, empresa, projeto ou resultado que não exista no currículo base.
 8. Evite texto cansativo (acima de 3.000 caracteres) e evite texto curto demais/genérico (abaixo de 800 caracteres).
 9. Retorne APENAS um JSON válido no formato: {"coverLetter":"texto da carta"}.
+10. ${language === 'EN' ? 'INGLÊS: ortografia e pontuação em inglês padrão, sem erros grosseiros.' : 'PORTUGUÊS (PT-BR) — ATENÇÃO REDOBRADA: ortografia brasileira impecável, com acentuação correta (incluindo til e cedilha), sem omitir acentos por conveniência; revise cada frase da carta antes de concluir.'}
 
 # DESCRIÇÃO DA VAGA (JD):
 ${jobDescription}

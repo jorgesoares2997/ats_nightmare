@@ -51,6 +51,58 @@ function getErrorMessage(error: unknown) {
   return 'Unknown error';
 }
 
+const PT_BR_SPELLING_FIXES: Array<[RegExp, string]> = [
+  [/\bformacao academica\b/gi, 'formação acadêmica'],
+  [/\bformacao\b/gi, 'formação'],
+  [/\bacademica\b/gi, 'acadêmica'],
+  [/\bacademico\b/gi, 'acadêmico'],
+  [/\bexperiencia\b/gi, 'experiência'],
+  [/\btecnico\b/gi, 'técnico'],
+  [/\btecnica\b/gi, 'técnica'],
+  [/\bgestao\b/gi, 'gestão'],
+  [/\bsolucao\b/gi, 'solução'],
+  [/\bsolucoes\b/gi, 'soluções'],
+  [/\bnao\b/gi, 'não'],
+  [/\bproducao\b/gi, 'produção'],
+  [/\bimplementacao\b/gi, 'implementação'],
+  [/\bcomunicacao\b/gi, 'comunicação'],
+  [/\borganizacao\b/gi, 'organização'],
+  [/\bnegociacao\b/gi, 'negociação'],
+  [/\bmetodologia\b/gi, 'metodologia'],
+  [/\bmetodos ageis\b/gi, 'métodos ágeis'],
+  [/\bmicrosservicos\b/gi, 'microsserviços'],
+  [/\bintegracao\b/gi, 'integração'],
+  [/\bcolaboracao\b/gi, 'colaboração'],
+  [/\banalise\b/gi, 'análise'],
+];
+
+function fixPtBrSpellingInString(text: string): string {
+  return PT_BR_SPELLING_FIXES.reduce((result, [pattern, replacement]) => {
+    return result.replace(pattern, replacement);
+  }, text);
+}
+
+function fixPtBrSpellingInJsonValue(value: unknown): unknown {
+  if (typeof value === 'string') {
+    return fixPtBrSpellingInString(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(fixPtBrSpellingInJsonValue);
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, childValue]) => [
+        key,
+        fixPtBrSpellingInJsonValue(childValue),
+      ])
+    );
+  }
+
+  return value;
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -104,6 +156,9 @@ Leia profundamente as informações do arquivo PDF anexo, perceba perfeitamente 
 6. GÊNERO MASCULINO: O currículo é para um HOMEM. Sempre escreva no masculino.
 7. Otimize os "highlights" das experiências com FOCO nos resultados e terminologia da vaga. Use a tag HTML <strong> nas keywords dentro do highlight.
 8. VOCÊ DEVE RETORNAR APENAS UM JSON VÁLIDO puro. Sem backticks/markdown por fora.
+9. ${language === 'EN' ? 'INGLÊS: Ortografia e pontuação em inglês padrão, sem erros grosseiros.' : 'PORTUGUÊS (PT-BR) — ATENÇÃO REDOBRADA: escreva com ortografia brasileira impecável. Use acentuação correta em todas as palavras aplicáveis, incluindo cedilha e til. PROIBIDO omitir acentos por conveniência.'}
+10. ${language === 'EN' ? 'ENGLISH QUALITY CHECK: review all strings and fix grammar/spelling before returning the final JSON.' : 'CHECKLIST OBRIGATÓRIO ANTES DE RESPONDER: revise cada string do JSON e corrija qualquer forma sem acento. Esta expressão deve aparecer corretamente quando aplicável: "Formação Acadêmica" (nunca "formacao academica"). Também validar: experiência, técnico, gestão, solução, implementação, organização, comunicação, produção, análise, microsserviços, não.'}
+11. ${language === 'EN' ? 'Keep section titles natural and professional.' : 'Use títulos e textos com gramática natural de português profissional. Evite linguagem truncada ou telegráfica.'}
 
 # ESTRUTURA DO JSON ESPERADA:
 {
@@ -154,7 +209,8 @@ ${customPrompt ? `# AJUSTES ESPECÍFICOS DO USUÁRIO:\n${customPrompt}` : ''}
       cleanJsonStr = cleanJsonStr.replace(/\`\`\`$/m, '');
     }
 
-    const data = JSON.parse(cleanJsonStr.trim());
+    const parsedData = JSON.parse(cleanJsonStr.trim());
+    const data = language === 'EN' ? parsedData : fixPtBrSpellingInJsonValue(parsedData);
     return NextResponse.json({
       ...data,
       _meta: {
